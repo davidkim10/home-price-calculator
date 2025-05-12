@@ -136,7 +136,7 @@ export const Calculator = () => {
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      <Card>
+      <Card className="rounded-sm">
         <CardHeader>
           <CardTitle>Home Cost Calculator</CardTitle>
           {isMounted.current && !housePriceInput.value && (
@@ -287,7 +287,7 @@ export const Calculator = () => {
           </li>
         </ul>
 
-        <p className="font-bold text-md mt-8 flex justify-between">
+        <p className="font-bold text-sm mt-4 flex justify-between bg-gray-100 p-4 rounded-md">
           Total Monthly Payment:{" "}
           <span>${commaNumber(calculateTotalMonthlyPayment())}</span>
         </p>
