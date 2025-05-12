@@ -5,7 +5,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import commaNumber from "comma-number";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface UseFormattedInputOptions {
   maxDecimals?: number;
@@ -17,7 +27,6 @@ const useFormattedInput = (
   options: UseFormattedInputOptions = {}
 ) => {
   const { maxDecimals = 2, formatFn = commaNumber } = options;
-
   const [value, setValue] = useState<number>(initialValue);
   const [displayValue, setDisplayValue] = useState<string>(
     initialValue === 0 ? "" : initialValue.toString()
@@ -35,7 +44,9 @@ const useFormattedInput = (
 
     // Ensure only one decimal point
     const parts = numericValue.split(".");
-    if (parts.length > 2 || parts[1]?.length > maxDecimals) return;
+    if (parts.length > 2 || parts[1]?.length > maxDecimals) {
+      return;
+    }
 
     // Check if this is just a decimal point with no number
     if (numericValue === ".") {
@@ -62,15 +73,19 @@ const useFormattedInput = (
 
 export const Calculator = () => {
   const isMounted = useRef(false);
+  const [timeFrame, setTimeFrame] = useState<"monthly" | "yearly">("monthly");
   const housePriceInput = useFormattedInput(0);
   const downPaymentInput = useFormattedInput(0);
   const insuranceInput = useFormattedInput(0);
   const interestRateInput = useFormattedInput(3.5, { maxDecimals: 3 });
   const taxRateInput = useFormattedInput(2, { maxDecimals: 3 });
-  const [loanTerm, setLoanTerm] = useState(0);
+  const [loanTerm, setLoanTerm] = useState(30);
+  const multiplier = getTimeMultiplier();
 
   useEffect(() => {
-    isMounted.current = true;
+    if (!isMounted.current) {
+      isMounted.current = true;
+    }
   }, []);
 
   const setDownPaymentQuickOption = (percentage: number) => {
@@ -81,6 +96,10 @@ export const Calculator = () => {
       },
     } as unknown as React.ChangeEvent<HTMLInputElement>);
   };
+
+  function getTimeMultiplier() {
+    return timeFrame === "yearly" ? 12 : 1;
+  }
 
   const calculateDownPaymentPercentage = () => {
     if (housePriceInput.value === 0) return 0;
@@ -96,7 +115,7 @@ export const Calculator = () => {
     );
   };
 
-  const calculateMonthlyMortgage = () => {
+  const calculateMortgage = () => {
     if (!loanTerm) return 0;
     const loanAmount = calculateLoanAmount();
     const monthlyRate = interestRateInput.value / 100 / 12;
@@ -107,31 +126,30 @@ export const Calculator = () => {
         (monthlyRate * Math.pow(1 + monthlyRate, numberOfPayments))) /
       (Math.pow(1 + monthlyRate, numberOfPayments) - 1);
 
-    const total = Math.round(monthlyPayment * 100) / 100;
-    return total || 0;
+    const monthlyCost = Math.round(monthlyPayment * 100) / 100;
+    const multiplier = getTimeMultiplier();
+
+    return Math.round(monthlyCost * multiplier * 100) / 100 || 0;
   };
 
-  const calculateMonthlyTax = () => {
-    return (
+  const calculateTax = () => {
+    const monthlyTax =
       Math.round(
         ((housePriceInput.value * ((taxRateInput.value || 0) / 100)) / 12) * 100
-      ) / 100
-    );
+      ) / 100;
+
+    return Math.round(monthlyTax * multiplier * 100) / 100;
   };
 
-  const calculateMonthlyInsurance = () => {
-    return Math.round((insuranceInput.value / 12) * 100) / 100;
+  const calculateInsurance = () => {
+    const monthlyInsurance = insuranceInput.value / 12;
+    const multiplier = getTimeMultiplier();
+    return Math.round(monthlyInsurance * multiplier * 100) / 100;
   };
 
-  const calculateTotalMonthlyPayment = () => {
-    return (
-      Math.round(
-        (calculateMonthlyMortgage() +
-          calculateMonthlyTax() +
-          calculateMonthlyInsurance()) *
-          100
-      ) / 100
-    );
+  const calculateTotalPayment = () => {
+    const total = calculateMortgage() + calculateTax() + calculateInsurance();
+    return Math.round(total * 100) / 100;
   };
 
   return (
@@ -248,48 +266,70 @@ export const Calculator = () => {
                 <Label className="block text-sm font-medium mb-1">
                   Loan Term (years)
                 </Label>
-                <Input
-                  className="w-full p-2 border rounded"
-                  placeholder="Enter loan term"
-                  type="number"
-                  value={loanTerm}
-                  onChange={(e) => {
-                    const value = e.target.value as unknown as number;
-                    setLoanTerm(value);
+                <Select
+                  value={loanTerm.toString()}
+                  onValueChange={(value) => {
+                    setLoanTerm(parseInt(value));
                   }}
-                />
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Select a loan term" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectLabel>Loan Term (years)</SelectLabel>
+                      <SelectItem value="10">10 years</SelectItem>
+                      <SelectItem value="15">15 years</SelectItem>
+                      <SelectItem value="20">20 years</SelectItem>
+                      <SelectItem value="30">30 years</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <div className="mt-6 p-4 rounded-lg">
-        <h2 className="text-lg font-semibold mb-4">Monthly Breakdown</h2>
+      <div className="p-4 rounded-lg">
+        <h2 className="text-lg font-semibold mb-4">Cost Breakdown</h2>
+
+        <Tabs
+          defaultValue="monthly"
+          value={timeFrame}
+          onValueChange={(value) => setTimeFrame(value as "monthly" | "yearly")}
+          className="mb-4"
+        >
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="monthly">Monthly</TabsTrigger>
+            <TabsTrigger value="yearly">Yearly</TabsTrigger>
+          </TabsList>
+        </Tabs>
+
         <ul className="space-y-2 text-sm divide-y border-b *:p-2 *:flex *:justify-between">
           <li>
-            Down Payment Percentage:{" "}
-            <span>{calculateDownPaymentPercentage()}%</span>
+            Down Payment: <span>{calculateDownPaymentPercentage()}%</span>
           </li>
           <li>
             Loan Amount: <span>${commaNumber(calculateLoanAmount())}</span>
           </li>
           <li>
-            Monthly Mortgage:{" "}
-            <span>${commaNumber(calculateMonthlyMortgage())}</span>
+            Mortgage: <span>${commaNumber(calculateMortgage())}</span>
           </li>
           <li>
-            Monthly Tax: <span>${commaNumber(calculateMonthlyTax())}</span>
+            Property Tax: <span>${commaNumber(calculateTax())}</span>
           </li>
           <li>
-            Monthly Insurance:{" "}
-            <span>${commaNumber(calculateMonthlyInsurance())}</span>
+            Insurance: <span>${commaNumber(calculateInsurance())}</span>
+          </li>
+          <li>
+            Loan Term: <span>{loanTerm} years</span>
           </li>
         </ul>
 
-        <p className="font-bold text-sm mt-4 flex justify-between bg-gray-100 p-4 rounded-md">
-          Total Monthly Payment:{" "}
-          <span>${commaNumber(calculateTotalMonthlyPayment())}</span>
+        <p className="font-bold text-md mt-8 flex justify-between">
+          {timeFrame === "monthly" ? "Monthly" : "Yearly"} Payment:{" "}
+          <span>${commaNumber(calculateTotalPayment())}</span>
         </p>
       </div>
     </div>
