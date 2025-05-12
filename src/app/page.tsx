@@ -5,7 +5,7 @@ export default function Home() {
       <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
         <Calculator />
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
+      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center mt-10">
         <p className="text-sm text-gray-500">
           {new Date().getFullYear()} &copy; All rights reserved.
         </p>
