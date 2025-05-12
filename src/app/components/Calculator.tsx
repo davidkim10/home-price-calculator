@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -61,12 +61,17 @@ const useFormattedInput = (
 };
 
 export const Calculator = () => {
+  const isMounted = useRef(false);
   const housePriceInput = useFormattedInput(0);
   const downPaymentInput = useFormattedInput(0);
   const insuranceInput = useFormattedInput(0);
   const interestRateInput = useFormattedInput(3.5, { maxDecimals: 3 });
   const taxRateInput = useFormattedInput(2, { maxDecimals: 3 });
   const [loanTerm, setLoanTerm] = useState(0);
+
+  useEffect(() => {
+    isMounted.current = true;
+  }, []);
 
   const setDownPaymentQuickOption = (percentage: number) => {
     const downPayment = housePriceInput.value * (percentage / 100);
@@ -134,7 +139,7 @@ export const Calculator = () => {
       <Card>
         <CardHeader>
           <CardTitle>Home Cost Calculator</CardTitle>
-          {!housePriceInput.value && (
+          {isMounted.current && !housePriceInput.value && (
             <p className="text-sm text-red-500">
               Don&apos;t forget to enter the price of the home
             </p>
